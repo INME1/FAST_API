@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  # Django Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/app
+    ports:
+      - "${DJANGO_PORT}:8000"
+    environment:
+      - DEBUG=${DJANGO_DEBUG}
+      - SECRET_KEY=${DJANGO_SECRET_KEY}
+      - ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+    depends_on:
+      - db
+    restart: unless-stopped
+    command: python manage.py runserver 0.0.0.0:8000
+
+  # FastAPI Service
+  fastapi:
+    build:
+      context: ./fastapi-service
+      dockerfile: Dockerfile
+    volumes:
+      - ./fastapi-service:/app
+    ports:
+      - "${FASTAPI_PORT}:8001"
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
+    depends_on:
+      - db
+    restart: unless-stopped
+    command: uvicorn main:app --host 0.0.0.0 --port 8001 --reload
+
+  # React Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "${REACT_PORT}:3000"
+    environment:
+      - REACT_APP_DJANGO_API=http://localhost:8000
+      - REACT_APP_FASTAPI_API=http://localhost:8001
+    depends_on:
+      - backend
+      - fastapi
+    restart: unless-stopped
+
+  # Nginx (선택사항 - 프로덕션용)
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "${NGINX_PORT}:80"
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+    depends_on:
+      - frontend
+      - backend
+      - fastapi
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
