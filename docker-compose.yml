@@ -11,27 +11,9 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "5433:5432"
     restart: unless-stopped
 
-  # Django Backend
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    volumes:
-      - ./backend:/app
-    ports:
-      - "${DJANGO_PORT}:8000"
-    environment:
-      - DEBUG=${DJANGO_DEBUG}
-      - SECRET_KEY=${DJANGO_SECRET_KEY}
-      - ALLOWED_HOSTS=${DJANGO_ALLOWED_HOSTS}
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-    depends_on:
-      - db
-    restart: unless-stopped
-    command: python manage.py runserver 0.0.0.0:8000
 
   # FastAPI Service
   fastapi:
@@ -63,7 +45,6 @@ services:
       - REACT_APP_DJANGO_API=http://localhost:8000
       - REACT_APP_FASTAPI_API=http://localhost:8001
     depends_on:
-      - backend
       - fastapi
     restart: unless-stopped
 
@@ -76,7 +57,6 @@ services:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
     depends_on:
       - frontend
-      - backend
       - fastapi
     restart: unless-stopped
 
