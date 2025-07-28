@@ -163,7 +163,6 @@ const WebSocketChat: React.FC<WebSocketChatProps> = ({ apiUrl }) => {
               marginBottom: '10px',
               padding: '8px 12px',
               borderRadius: '8px',
-              backgroundColor: msg.isOwnMessage ? '#007bff' : '#f8f9fa',
               color: msg.isOwnMessage ? 'white' : 'black',
               marginLeft: msg.isOwnMessage ? '20%' : '0',
               marginRight: msg.isOwnMessage ? '0' : '20%',
